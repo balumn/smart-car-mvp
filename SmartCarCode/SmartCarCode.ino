@@ -12,6 +12,8 @@ AF_DCMotor motor4(4, MOTOR34_1KHZ); // create motor #4 using M1 output on Motor 
 #define TRIG_PIN A0
 #define ECHO_PIN A1
 #define MAX_DISTANCE 100
+#define BUZZER_PIN 9
+#define BUZZER_FREQUENCY 1000  // Fixed frequency of 1000Hz
 
 NewPing sonar(TRIG_PIN, ECHO_PIN, MAX_DISTANCE);
 SoftwareSerial BT(0, 1);
@@ -44,6 +46,8 @@ void setup() // put your setup code here, to run once:
   range = MAX_DISTANCE - 20;
   delay(100);
   k = EEPROM.read(200);
+
+  pinMode(BUZZER_PIN, OUTPUT);
 }
 
 void Stop()
@@ -71,8 +75,9 @@ int readPing()
   return cm;
 }
 
-void goBackward()
+void goBackward(int delayTime = 1000)
 {
+  BT.println("Going backward with delay " + String(delayTime));
   motor1.run(BACKWARD);
   motor4.run(BACKWARD);
   motor2.run(BACKWARD);
@@ -82,12 +87,13 @@ void goBackward()
   motor4.setSpeed(i - 27);
   motor2.setSpeed(i + 3);
   motor3.setSpeed(i - 27);
-  delay(400);
+  delay(delayTime);
   Stop();
 }
 
-void goForward()
+void goForward(int delayTime = 1000)  // Default parameter of 1000ms
 {
+  BT.println("Going forward with delay " + String(delayTime));
   motor1.run(FORWARD);
   motor4.run(FORWARD);
   motor2.run(FORWARD);
@@ -97,7 +103,7 @@ void goForward()
   motor4.setSpeed(i - 25);
   motor2.setSpeed(i);
   motor3.setSpeed(i - 25);
-  delay(1000);
+  delay(delayTime);
   Stop();
 }
 
@@ -129,31 +135,33 @@ void goSmart()
   }
 }
 
-void turnRight()
+void turnRight(int speed = 255, int delayTime = 500)
 {
-  motor4.run(BACKWARD);
-  motor4.setSpeed(255);
+  BT.println("Turning right with speed " + String(speed) + " and delay " + String(delayTime));
   motor1.run(FORWARD);
-  motor1.setSpeed(255);
-  motor3.run(BACKWARD);
-  motor3.setSpeed(255);
+  motor1.setSpeed(speed);
   motor2.run(FORWARD);
-  motor2.setSpeed(255);
-  delay(j);
+  motor2.setSpeed(speed);
+  motor3.run(BACKWARD);
+  motor3.setSpeed(speed);
+  motor4.run(BACKWARD);
+  motor4.setSpeed(speed);
+  delay(delayTime);
   Stop();
 }
 
-void turnLeft()
+void turnLeft(int speed = 255, int delayTime = 500)
 {
+  BT.println("Turning left with speed " + String(speed) + " and delay " + String(delayTime));
   motor1.run(BACKWARD);
-  motor1.setSpeed(255);
-  motor4.run(FORWARD);
-  motor4.setSpeed(255);
+  motor1.setSpeed(speed);
   motor2.run(BACKWARD);
-  motor2.setSpeed(255);
+  motor2.setSpeed(speed);
   motor3.run(FORWARD);
-  motor3.setSpeed(255);
-  delay(j);
+  motor3.setSpeed(speed);
+  motor4.run(FORWARD);
+  motor4.setSpeed(speed);
+  delay(delayTime);
   Stop();
 }
 
@@ -229,6 +237,17 @@ void clearMemory() {
     EEPROM.write(i, 0);  // Set each EEPROM address to 0
   }
   Serial.println("All memory cleared.");
+}
+
+
+/**
+ * Plays a simple beep on the buzzer
+ * @param duration Duration in milliseconds (default 500ms)
+ */
+void playRoomTone(int duration = 500) {
+  digitalWrite(BUZZER_PIN, HIGH);
+  delay(duration);
+  digitalWrite(BUZZER_PIN, LOW);
 }
 
 /**
@@ -449,7 +468,6 @@ void loop() // put your main code here, to run repeatedly:
     else if (cmd == 'r') // Turns in Right direction
     {
       BT.println("Turn Right 45D");
-      j = 170;
       turnRight();
       if (updateMemory)
       {
@@ -460,7 +478,6 @@ void loop() // put your main code here, to run repeatedly:
     else if (cmd == 'l') // Turns in Left direction
     {
       BT.println("Turn Left 45D");
-      j = 170;
       turnLeft();
       if (updateMemory)
       {
@@ -509,6 +526,76 @@ void loop() // put your main code here, to run repeatedly:
     else if (cmd == 'c') {  // Custom command to clear EEPROM memory
       BT.println("Clearing all memory...");
       clearMemory();
+    }
+
+    else if (cmd == 'p') {  // 'p' for predefined path
+      BT.println("Starting predefined route...");
+      
+      // Path 1: Start to R1
+      BT.println("Path 1: Moving forward to R1");
+      goForward(4000);
+      delay(500);
+      turnLeft();
+      delay(500);
+      goForward(4000);
+      BT.println("Reached R1; waiting for 3 seconds.");
+      playRoomTone(3000);
+      
+      // Path 2: R1 to R2
+      BT.println("Path 2: Moving forward to R2");
+      turnRight(680, 1600);
+      delay(500);
+      goForward(4000);
+      delay(500);
+      turnLeft();
+      delay(500);
+      goForward(4000);
+      delay(500);
+      turnLeft();
+      delay(500);
+      goForward(4000);
+      BT.println("Reached R2; waiting for 3 seconds.");
+      playRoomTone(3000);
+      
+      // Path 3: R2 to R3
+      BT.println("Path 3: Taking a U turn and moving to R3");
+      turnRight(680, 1600);
+      delay(500);
+      goForward(8000);
+      delay(500);
+      BT.println("Reached R3; waiting for 3 seconds.");
+      playRoomTone(3000);
+      
+      // Path 4: R3 to R4
+      BT.println("Path 4: Taking a U turn and moving left to R4");
+      turnRight(680, 1600);
+      delay(500);
+      goForward(4000);
+      delay(500);
+      turnLeft();
+      delay(500);
+      goForward(4000);
+      delay(500);
+      turnLeft();
+      delay(500);
+      goForward(4000);
+      BT.println("Reached R4; waiting for 3 seconds.");
+      playRoomTone(3000);
+      
+      // Path 5: R4 back to Start
+      BT.println("Path 5: Returning to start position");
+      turnRight(680, 1600);
+      delay(500);
+      goForward(4000);
+      delay(500);
+      turnLeft();
+      delay(500);
+      goForward(4000);
+      delay(500);
+      turnRight(680, 1600);
+      BT.println("Returned to starting position");
+      playRoomTone(3000);
+      BT.println("Route completed!");
     }
   }
 }
