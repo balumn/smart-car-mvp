@@ -132,6 +132,12 @@ void goSmart()
       takeTurn();
       break;
     }
+
+    if (goesRover == false){
+      Stop();
+      goesRover = false;
+      goBackward();
+    }
   }
 }
 
@@ -597,5 +603,10 @@ void loop() // put your main code here, to run repeatedly:
       playRoomTone(3000);
       BT.println("Route completed!");
     }
-  }
+    
+    else if (cmd == 'x') {  // Stop the rover while in smart mode
+      BT.println("Stopping Smart Mode");
+      goesRover = false; // Set goesRover to false to stop the rover
+      Stop();
+    }
 }
